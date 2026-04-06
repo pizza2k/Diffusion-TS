@@ -178,6 +178,44 @@ class TrainerSampleTests(unittest.TestCase):
         self.assertEqual(len(samples), 10)
         self.assertEqual(samples[-2:], [2, 2])
 
+    def test_sample_uses_batch_specific_model_kwargs(self):
+        mod = self._load_solver_module()
+
+        class FakeTensor:
+            def __init__(self, batch_size):
+                self._batch_size = batch_size
+
+            def detach(self):
+                return self
+
+            def cpu(self):
+                return self
+
+            def numpy(self):
+                return [self._batch_size] * self._batch_size
+
+        class FakeModel:
+            def __init__(self):
+                self.calls = []
+
+            def generate_mts(self, batch_size, model_kwargs=None, cond_fn=None):
+                self.calls.append((batch_size, model_kwargs))
+                return FakeTensor(batch_size)
+
+        trainer = mod.Trainer.__new__(mod.Trainer)
+        trainer.logger = None
+        trainer.ema = types.SimpleNamespace(ema_model=FakeModel())
+
+        def kwargs_builder(batch_size, produced, batch_index):
+            return {'y': [batch_index] * batch_size, 'produced': produced}
+
+        trainer.sample(num=9, size_every=4, shape=[2, 3], model_kwargs_fn=kwargs_builder)
+
+        self.assertEqual([c[0] for c in trainer.ema.ema_model.calls], [4, 4, 1])
+        self.assertEqual(trainer.ema.ema_model.calls[0][1]['y'], [0, 0, 0, 0])
+        self.assertEqual(trainer.ema.ema_model.calls[1][1]['y'], [1, 1, 1, 1])
+        self.assertEqual(trainer.ema.ema_model.calls[2][1]['y'], [2])
+
 
 if __name__ == '__main__':
     unittest.main()

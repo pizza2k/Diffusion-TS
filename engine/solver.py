@@ -143,7 +143,17 @@ class Trainer(object):
         if self.logger is not None:
             self.logger.log_info('Training done, time: {:.2f}'.format(time.time() - tic))
 
-    def sample(self, num, size_every, shape=None, dir=None, name=None, model_kwargs=None, cond_fn=None):
+    def sample(
+        self,
+        num,
+        size_every,
+        shape=None,
+        dir=None,
+        name=None,
+        model_kwargs=None,
+        cond_fn=None,
+        model_kwargs_fn=None,
+    ):
         if self.logger is not None:
             tic = time.time()
             self.logger.log_info('Begin to sample...')
@@ -158,9 +168,10 @@ class Trainer(object):
             current_batch_size = min(size_every, num - produced)
             if current_batch_size <= 0:
                 break
+            current_model_kwargs = model_kwargs_fn(current_batch_size, produced, i) if model_kwargs_fn is not None else model_kwargs
             sample = self.ema.ema_model.generate_mts(
                 batch_size=current_batch_size,
-                model_kwargs=model_kwargs,
+                model_kwargs=current_model_kwargs,
                 cond_fn=cond_fn,
             )
             sample_np = sample.detach().cpu().numpy()

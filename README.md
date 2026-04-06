@@ -61,6 +61,11 @@ While training, the script will save check points to the *results* folder after 
 (myenv) $ python main.py --name {dataset_name} --config_file {config.yaml} --gpu 0 --sample 1 --milestone {checkpoint_number} --mode predict --pred_len {pred_len}
 ```
 
+#### Classifier-Guided Conditional Sampling
+```bash
+(myenv) $ python main.py --name {name} --config_file {config.yaml} --gpu 0 --sample 1 --milestone {checkpoint_number} --mode cond --cond_label {label_id} --classifier_scale {scale} --classifier_milestone {classifier_checkpoint_number}
+```
+
 
 ## Visualization and Evaluation
 
