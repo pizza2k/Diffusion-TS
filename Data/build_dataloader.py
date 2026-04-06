@@ -18,7 +18,8 @@ def build_dataloader(config, args=None):
 
     dataload_info = {
         'dataloader': dataloader,
-        'dataset': dataset
+        'dataset': dataset,
+        'column_names': dataset.column_names,
     }
 
     return dataload_info

@@ -1,3 +1,54 @@
+# 模型检查点（1.6GB - 最大！）
+Checkpoints_tail_704/
+Checkpoints_*/
+checkpoints/
+*.ckpt
+*.pth
+*.pt
+
+# 输出文件（291MB）
+OUTPUT/
+outputs/
+output/
+
+# 数据集（162MB）
+Data/datasets/
+Data/raw/
+Data/processed/
+data/
+
+# Jupyter notebooks（这些.ipynb文件）
+*.ipynb
+.ipynb_checkpoints/
+
+# 实验日志和临时文件
+Experiments/logs/
+Experiments/runs/
+*.log
+
+# Python缓存
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# 虚拟环境
+venv/
+env/
+ENV/
+.venv
+
+# IDE配置
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -161,5 +212,7 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 *.ipynb
+
+Checkpoints_tail_704/
 
 Data/datasets/

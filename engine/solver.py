@@ -3,6 +3,7 @@ import sys
 import time
 import torch
 import numpy as np
+import pandas as pd
 import torch.nn.functional as F
 
 from pathlib import Path
@@ -11,6 +12,7 @@ from ema_pytorch import EMA
 from torch.optim import Adam
 from torch.nn.utils import clip_grad_norm_
 from Utils.io_utils import instantiate_from_config, get_model_parameters_info
+from Models.interpretable_diffusion.model_utils import unnormalize_to_zero_to_one
 
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
@@ -143,15 +145,26 @@ class Trainer(object):
         if self.logger is not None:
             self.logger.log_info('Training done, time: {:.2f}'.format(time.time() - tic))
 
-    def sample(self, num, size_every, shape=None, model_kwargs=None, cond_fn=None):
+    def sample(self, num, size_every, shape=None, dir=None, name=None, auto_norm=True, column_names=None, model_kwargs=None, cond_fn=None):
         if self.logger is not None:
             tic = time.time()
             self.logger.log_info('Begin to sample...')
         samples = np.empty([0, shape[0], shape[1]])
         num_cycle = int(num // size_every) + 1
 
-        for _ in range(num_cycle):
+        for i in range(num_cycle):
             sample = self.ema.ema_model.generate_mts(batch_size=size_every, model_kwargs=model_kwargs, cond_fn=cond_fn)
+            samplePUT = sample.cpu().numpy().copy()
+            if auto_norm:
+                samplePUT = unnormalize_to_zero_to_one(samplePUT)
+            np.save(os.path.join(dir, f'ddpm_fake_{name}_{i}.npy'), samplePUT)
+        
+            seq_len, feat_dim = shape
+            sample_2d = samplePUT.reshape(-1, feat_dim)  
+            
+            df = pd.DataFrame(sample_2d, columns=column_names)
+            df.to_csv(os.path.join(dir, f'ddpm_fake_{name}_{i}.csv'), index=False)
+            
             samples = np.row_stack([samples, sample.detach().cpu().numpy()])
             torch.cuda.empty_cache()
 

@@ -2,6 +2,7 @@ import os
 import torch
 import argparse
 import numpy as np
+import pandas as pd
 
 from engine.logger import Logger
 from engine.solver import Trainer
@@ -88,11 +89,21 @@ def main():
     else:
         trainer.load(args.milestone)
         dataset = dataloader_info['dataset']
-        samples = trainer.sample(num=len(dataset), size_every=2001, shape=[dataset.window, dataset.var_num])
+        column_names = dataloader_info['column_names']
+        
+        # samples = trainer.sample(num=len(dataset), size_every=128, shape=[dataset.window, dataset.var_num])
+        samples = trainer.sample(num=len(dataset), size_every=16, shape=[dataset.window, dataset.var_num], dir=args.save_dir, name=args.name, auto_norm=dataset.auto_norm, column_names=column_names)
         if dataset.auto_norm:
             samples = unnormalize_to_zero_to_one(samples)
             # samples = dataset.scaler.inverse_transform(samples.reshape(-1, samples.shape[-1])).reshape(samples.shape)
         np.save(os.path.join(args.save_dir, f'ddpm_fake_{args.name}.npy'), samples)
+        
+        num_samples, seq_len, feat_dim = samples.shape
+        samples_2d = samples.reshape(-1, feat_dim)  
+        
+        
+        df = pd.DataFrame(samples_2d, columns=column_names)
+        df.to_csv(os.path.join(args.save_dir, f'ddpm_fake_{args.name}.csv'), index=False)
 
 if __name__ == '__main__':
     main()
