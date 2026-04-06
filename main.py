@@ -83,8 +83,8 @@ def main():
         sampling_steps = config['dataloader']['test_dataset']['sampling_steps']
         samples, *_ = trainer.restore(dataloader, [dataset.window, dataset.var_num], coef, stepsize, sampling_steps)
         if dataset.auto_norm:
-            samples = unnormalize_to_zero_to_one(samples)
-            # samples = dataset.scaler.inverse_transform(samples.reshape(-1, samples.shape[-1])).reshape(samples.shape)
+            # samples = unnormalize_to_zero_to_one(samples)
+            samples = dataset.scaler.inverse_transform(samples.reshape(-1, samples.shape[-1])).reshape(samples.shape)
         np.save(os.path.join(args.save_dir, f'ddpm_{args.mode}_{args.name}.npy'), samples)
     else:
         trainer.load(args.milestone)
@@ -92,10 +92,10 @@ def main():
         column_names = dataloader_info['column_names']
         
         # samples = trainer.sample(num=len(dataset), size_every=128, shape=[dataset.window, dataset.var_num])
-        samples = trainer.sample(num=len(dataset), size_every=16, shape=[dataset.window, dataset.var_num], dir=args.save_dir, name=args.name, auto_norm=dataset.auto_norm, column_names=column_names)
+        samples = trainer.sample(num=len(dataset), size_every=64, shape=[dataset.window, dataset.var_num], dir=args.save_dir, name=args.name, auto_norm=dataset.auto_norm, column_names=column_names, dataset=dataset)
         if dataset.auto_norm:
-            samples = unnormalize_to_zero_to_one(samples)
-            # samples = dataset.scaler.inverse_transform(samples.reshape(-1, samples.shape[-1])).reshape(samples.shape)
+            # samples = unnormalize_to_zero_to_one(samples)
+            samples = dataset.scaler.inverse_transform(samples.reshape(-1, samples.shape[-1])).reshape(samples.shape)
         np.save(os.path.join(args.save_dir, f'ddpm_fake_{args.name}.npy'), samples)
         
         num_samples, seq_len, feat_dim = samples.shape

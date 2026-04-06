@@ -145,18 +145,20 @@ class Trainer(object):
         if self.logger is not None:
             self.logger.log_info('Training done, time: {:.2f}'.format(time.time() - tic))
 
-    def sample(self, num, size_every, shape=None, dir=None, name=None, auto_norm=True, column_names=None, model_kwargs=None, cond_fn=None):
+    def sample(self, num, size_every, shape=None, dir=None, name=None, auto_norm=True, column_names=None, dataset=None, model_kwargs=None, cond_fn=None):
         if self.logger is not None:
             tic = time.time()
             self.logger.log_info('Begin to sample...')
         samples = np.empty([0, shape[0], shape[1]])
-        num_cycle = int(num // size_every) + 1
-
+        # num_cycle = int(num // size_every) + 1
+        num_cycle = int(np.ceil(num / size_every))
+        
         for i in range(num_cycle):
             sample = self.ema.ema_model.generate_mts(batch_size=size_every, model_kwargs=model_kwargs, cond_fn=cond_fn)
             samplePUT = sample.cpu().numpy().copy()
             if auto_norm:
-                samplePUT = unnormalize_to_zero_to_one(samplePUT)
+                # samplePUT = unnormalize_to_zero_to_one(samplePUT)
+                samplePUT = dataset.scaler.inverse_transform(samplePUT.reshape(-1, samples.shape[-1])).reshape(samplePUT.shape)
             np.save(os.path.join(dir, f'ddpm_fake_{name}_{i}.npy'), samplePUT)
         
             seq_len, feat_dim = shape
