@@ -3,7 +3,6 @@ import sys
 import time
 import torch
 import numpy as np
-import pandas as pd
 import torch.nn.functional as F
 
 from pathlib import Path
@@ -12,7 +11,6 @@ from ema_pytorch import EMA
 from torch.optim import Adam
 from torch.nn.utils import clip_grad_norm_
 from Utils.io_utils import instantiate_from_config, get_model_parameters_info
-from Models.interpretable_diffusion.model_utils import unnormalize_to_zero_to_one
 
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '../'))
@@ -145,30 +143,58 @@ class Trainer(object):
         if self.logger is not None:
             self.logger.log_info('Training done, time: {:.2f}'.format(time.time() - tic))
 
-    def sample(self, num, size_every, shape=None, dir=None, name=None, auto_norm=True, column_names=None, model_kwargs=None, cond_fn=None):
+    def sample(self, num, size_every, shape=None, dir=None, name=None, model_kwargs=None, cond_fn=None):
         if self.logger is not None:
             tic = time.time()
             self.logger.log_info('Begin to sample...')
-        samples = np.empty([0, shape[0], shape[1]])
-        num_cycle = int(num // size_every) + 1
+        if num <= 0:
+            return np.empty([0, shape[0], shape[1]])
+
+        samples = []
+        produced = 0
+        num_cycle = int(np.ceil(num / size_every))
 
         for i in range(num_cycle):
-            sample = self.ema.ema_model.generate_mts(batch_size=size_every, model_kwargs=model_kwargs, cond_fn=cond_fn)
-            samplePUT = sample.cpu().numpy().copy()
-            if auto_norm:
-                samplePUT = unnormalize_to_zero_to_one(samplePUT)
-            np.save(os.path.join(dir, f'ddpm_fake_{name}_{i}.npy'), samplePUT)
-        
-            seq_len, feat_dim = shape
-            sample_2d = samplePUT.reshape(-1, feat_dim)  
-            
-            df = pd.DataFrame(sample_2d, columns=column_names)
-            df.to_csv(os.path.join(dir, f'ddpm_fake_{name}_{i}.csv'), index=False)
-            
-            samples = np.row_stack([samples, sample.detach().cpu().numpy()])
+            current_batch_size = min(size_every, num - produced)
+            if current_batch_size <= 0:
+                break
+            sample = self.ema.ema_model.generate_mts(
+                batch_size=current_batch_size,
+                model_kwargs=model_kwargs,
+                cond_fn=cond_fn,
+            )
+            sample_np = sample.detach().cpu().numpy()
+            samples.append(sample_np)
+            produced += current_batch_size
+
+            if dir is not None and name is not None:
+                np.save(os.path.join(dir, f'ddpm_fake_{name}_{i}.npy'), sample_np)
+
+            if self.logger is not None:
+                if i == 0 or i == num_cycle - 1 or (i + 1) % max(1, num_cycle // 5) == 0:
+                    self.logger.log_info(
+                        'sample batch {}/{} shape={} min={:.6f} max={:.6f} mean={:.6f}'.format(
+                            i + 1,
+                            num_cycle,
+                            sample_np.shape,
+                            float(sample_np.min()),
+                            float(sample_np.max()),
+                            float(sample_np.mean()),
+                        )
+                    )
             torch.cuda.empty_cache()
 
+        samples = np.concatenate(samples, axis=0)
+
         if self.logger is not None:
+            self.logger.log_info(
+                'Sampling output shape={} min={:.6f} max={:.6f} mean={:.6f}'.format(
+                    samples.shape,
+                    float(samples.min()),
+                    float(samples.max()),
+                    float(samples.mean()),
+                )
+            )
             self.logger.log_info('Sampling done, time: {:.2f}'.format(time.time() - tic))
         return samples
 

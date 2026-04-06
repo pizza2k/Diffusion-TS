@@ -30,7 +30,7 @@ class MuJoCoDataset(Dataset):
         super(MuJoCoDataset, self).__init__()
         assert period in ['train', 'test'], 'period must be train or test.'
         if period == 'train':
-            assert ~(predict_length is not None or missing_ratio is not None), ''
+            assert not (predict_length is not None or missing_ratio is not None), ''
         
         self.window, self.var_num = window, dim
         self.auto_norm = neg_one_to_one

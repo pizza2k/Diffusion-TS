@@ -31,7 +31,7 @@ class TailDataset(Dataset):
         super(TailDataset, self).__init__()
         assert period in ['train', 'test'], 'period must be train or test.'
         if period == 'train':
-            assert ~(predict_length is not None or missing_ratio is not None), ''
+            assert not (predict_length is not None or missing_ratio is not None), ''
         self.name, self.pred_len, self.missing_ratio = name, predict_length, missing_ratio
         self.style, self.distribution, self.mean_mask_length = style, distribution, mean_mask_length
         self.rawdata, self.scaler, self.column_names = self.read_data(data_root, self.name)
@@ -136,7 +136,16 @@ class TailDataset(Dataset):
         """Reads a single .csv
         """
         df = pd.read_csv(filepath, header=0)
-        df.drop(df.columns[0], axis=1, inplace=True)
+        first_col = df.columns[0]
+        first_col_lower = str(first_col).lower()
+        is_non_numeric = not np.issubdtype(df[first_col].dtype, np.number)
+        should_drop_first_col = (
+            is_non_numeric
+            or first_col_lower in {'date', 'datetime', 'time', 'timestamp', 'index', 'idx'}
+            or first_col_lower.startswith('unnamed:')
+        )
+        if should_drop_first_col:
+            df.drop(first_col, axis=1, inplace=True)
         data = df.values
         column_names = df.columns.tolist()
         scaler = MinMaxScaler()

@@ -7,7 +7,6 @@ import pandas as pd
 from engine.logger import Logger
 from engine.solver import Trainer
 from Data.build_dataloader import build_dataloader, build_dataloader_cond
-from Models.interpretable_diffusion.model_utils import unnormalize_to_zero_to_one
 from Utils.io_utils import load_yaml_config, seed_everything, merge_opts_to_config, instantiate_from_config
 
 
@@ -53,6 +52,22 @@ def parse_args():
     return args
 
 def main():
+    def log_array_stats(logger_obj, prefix, arr):
+        if logger_obj is None:
+            return
+        if arr.size == 0:
+            logger_obj.log_info(f'{prefix}: empty array')
+            return
+        logger_obj.log_info(
+            '{} shape={} min={:.6f} max={:.6f} mean={:.6f}'.format(
+                prefix,
+                arr.shape,
+                float(arr.min()),
+                float(arr.max()),
+                float(arr.mean()),
+            )
+        )
+
     args = parse_args()
 
     if args.seed is not None:
@@ -72,6 +87,17 @@ def main():
         test_dataloader_info = build_dataloader_cond(config, args)
     dataloader_info = build_dataloader(config, args)
     trainer = Trainer(config=config, args=args, model=model, dataloader=dataloader_info, logger=logger)
+    train_dataset = dataloader_info['dataset']
+    logger.log_info(
+        'Train dataset info: name={} raw_len={} window={} var_num={} samples={} auto_norm={}'.format(
+            train_dataset.name,
+            train_dataset.len,
+            train_dataset.window,
+            train_dataset.var_num,
+            len(train_dataset),
+            train_dataset.auto_norm,
+        )
+    )
 
     if args.train:
         trainer.train()
@@ -82,28 +108,43 @@ def main():
         stepsize = config['dataloader']['test_dataset']['step_size']
         sampling_steps = config['dataloader']['test_dataset']['sampling_steps']
         samples, *_ = trainer.restore(dataloader, [dataset.window, dataset.var_num], coef, stepsize, sampling_steps)
-        if dataset.auto_norm:
-            samples = unnormalize_to_zero_to_one(samples)
-            # samples = dataset.scaler.inverse_transform(samples.reshape(-1, samples.shape[-1])).reshape(samples.shape)
+        log_array_stats(logger, 'Restore output (normalized space)', samples)
+        samples = dataset.unnormalize(samples)
+        log_array_stats(logger, 'Restore output (original scale)', samples)
         np.save(os.path.join(args.save_dir, f'ddpm_{args.mode}_{args.name}.npy'), samples)
     else:
         trainer.load(args.milestone)
         dataset = dataloader_info['dataset']
         column_names = dataloader_info['column_names']
-        
-        # samples = trainer.sample(num=len(dataset), size_every=128, shape=[dataset.window, dataset.var_num])
-        samples = trainer.sample(num=len(dataset), size_every=16, shape=[dataset.window, dataset.var_num], dir=args.save_dir, name=args.name, auto_norm=dataset.auto_norm, column_names=column_names)
-        if dataset.auto_norm:
-            samples = unnormalize_to_zero_to_one(samples)
-            # samples = dataset.scaler.inverse_transform(samples.reshape(-1, samples.shape[-1])).reshape(samples.shape)
+        sample_batch_size = int(config['dataloader'].get('sample_size', config['dataloader']['batch_size']))
+        logger.log_info(
+            'Start unconditional sampling: num={} size_every={} milestone={}'.format(
+                len(dataset), sample_batch_size, args.milestone
+            )
+        )
+
+        samples = trainer.sample(
+            num=len(dataset),
+            size_every=sample_batch_size,
+            shape=[dataset.window, dataset.var_num],
+        )
+        log_array_stats(logger, 'Sample output (normalized space)', samples)
+        samples = dataset.unnormalize(samples)
+        log_array_stats(logger, 'Sample output (original scale)', samples)
         np.save(os.path.join(args.save_dir, f'ddpm_fake_{args.name}.npy'), samples)
-        
-        num_samples, seq_len, feat_dim = samples.shape
-        samples_2d = samples.reshape(-1, feat_dim)  
-        
-        
+
+        _, _, feat_dim = samples.shape
+        samples_2d = samples.reshape(-1, feat_dim)
+        if len(column_names) != feat_dim:
+            logger.log_info(
+                'column_names length mismatch: {} vs {}, fallback to feature_i'.format(
+                    len(column_names), feat_dim
+                )
+            )
+            column_names = [f'feature_{i}' for i in range(feat_dim)]
         df = pd.DataFrame(samples_2d, columns=column_names)
         df.to_csv(os.path.join(args.save_dir, f'ddpm_fake_{args.name}.csv'), index=False)
+        logger.log_info('Saved unconditional outputs to {}'.format(args.save_dir))
 
 if __name__ == '__main__':
     main()
