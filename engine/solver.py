@@ -158,7 +158,8 @@ class Trainer(object):
             samplePUT = sample.cpu().numpy().copy()
             if auto_norm:
                 # samplePUT = unnormalize_to_zero_to_one(samplePUT)
-                samplePUT = dataset.scaler.inverse_transform(samplePUT.reshape(-1, samples.shape[-1])).reshape(samplePUT.shape)
+                # samplePUT = dataset.scaler.inverse_transform(samplePUT.reshape(-1, samples.shape[-1])).reshape(samplePUT.shape)
+                samplePUT = dataset.unnormalize(samplePUT)
             np.save(os.path.join(dir, f'ddpm_fake_{name}_{i}.npy'), samplePUT)
         
             seq_len, feat_dim = shape

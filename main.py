@@ -95,7 +95,8 @@ def main():
         samples = trainer.sample(num=len(dataset), size_every=64, shape=[dataset.window, dataset.var_num], dir=args.save_dir, name=args.name, auto_norm=dataset.auto_norm, column_names=column_names, dataset=dataset)
         if dataset.auto_norm:
             # samples = unnormalize_to_zero_to_one(samples)
-            samples = dataset.scaler.inverse_transform(samples.reshape(-1, samples.shape[-1])).reshape(samples.shape)
+            #samples = dataset.scaler.inverse_transform(samples.reshape(-1, samples.shape[-1])).reshape(samples.shape)
+            samples = dataset.unnormalize(samples)
         np.save(os.path.join(args.save_dir, f'ddpm_fake_{args.name}.npy'), samples)
         
         num_samples, seq_len, feat_dim = samples.shape

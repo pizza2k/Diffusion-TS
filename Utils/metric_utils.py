@@ -123,7 +123,7 @@ def visualization(ori_data, generated_data, analysis, compare=3000):
         plt.xlabel('x-pca')
         plt.ylabel('y_pca')
         plt.show()
-
+        plt.savefig('pca_plot.png', dpi=300, bbox_inches='tight')
     elif analysis == 'tsne':
 
         # Do t-SNE Analysis together
@@ -147,7 +147,7 @@ def visualization(ori_data, generated_data, analysis, compare=3000):
         plt.xlabel('x-tsne')
         plt.ylabel('y_tsne')
         plt.show()
-
+        plt.savefig('tsne_plot.png', dpi=300, bbox_inches='tight')
     elif analysis == 'kernel':
        
         # Visualization parameter
@@ -167,6 +167,7 @@ def visualization(ori_data, generated_data, analysis, compare=3000):
         # plt.savefig(str(args.save_dir)+"/"+args.model1+"_histo.png", dpi=100,bbox_inches='tight')
         # plt.ylim((0, 12))
         plt.show()
+        plt.savefig('kernel_plot.png', dpi=300, bbox_inches='tight')
         plt.close()
 
 
