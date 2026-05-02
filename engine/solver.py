@@ -10,7 +10,7 @@ from pathlib import Path
 from tqdm.auto import tqdm
 from ema_pytorch import EMA
 from torch.optim import Adam
-from torch.nn.utils import clip_grad_norm_
+# from torch.nn.utils import clip_grad_norm_
 from Utils.io_utils import instantiate_from_config, get_model_parameters_info
 from Models.interpretable_diffusion.model_utils import unnormalize_to_zero_to_one
 
@@ -115,7 +115,7 @@ class Trainer(object):
 
                 pbar.set_description(f'loss: {total_loss:.6f}')
 
-                clip_grad_norm_(self.model.parameters(), 1.0)
+                # clip_grad_norm_(self.model.parameters(), 1.0)
                 self.opt.step()
                 self.sch.step(total_loss)
                 self.opt.zero_grad()
