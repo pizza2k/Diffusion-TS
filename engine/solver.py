@@ -48,9 +48,9 @@ class Trainer(object):
         self.opt = Adam(filter(lambda p: p.requires_grad, self.model.parameters()), lr=start_lr, betas=[0.9, 0.96])
         self.ema = EMA(self.model, beta=ema_decay, update_every=ema_update_every).to(self.device)
 
-        sc_cfg = config['solver']['scheduler']
-        sc_cfg['params']['optimizer'] = self.opt
-        self.sch = instantiate_from_config(sc_cfg)
+        # sc_cfg = config['solver']['scheduler']
+        # sc_cfg['params']['optimizer'] = self.opt
+        # self.sch = instantiate_from_config(sc_cfg)
 
         if self.logger is not None:
             self.logger.log_info(str(get_model_parameters_info(self.model)))
@@ -117,7 +117,7 @@ class Trainer(object):
 
                 clip_grad_norm_(self.model.parameters(), 1.0)
                 self.opt.step()
-                self.sch.step(total_loss)
+                # self.sch.step(total_loss)
                 self.opt.zero_grad()
                 self.step += 1
                 step += 1
