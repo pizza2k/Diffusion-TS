@@ -42,11 +42,11 @@ class Trainer(object):
         os.makedirs(self.results_folder, exist_ok=True)
 
         start_lr = config['solver'].get('base_lr', 1.0e-4)
-        ema_decay = config['solver']['ema']['decay']
-        ema_update_every = config['solver']['ema']['update_interval']
+        # ema_decay = config['solver']['ema']['decay']
+        # ema_update_every = config['solver']['ema']['update_interval']
 
         self.opt = Adam(filter(lambda p: p.requires_grad, self.model.parameters()), lr=start_lr, betas=[0.9, 0.96])
-        self.ema = EMA(self.model, beta=ema_decay, update_every=ema_update_every).to(self.device)
+        # self.ema = EMA(self.model, beta=ema_decay, update_every=ema_update_every).to(self.device)
 
         sc_cfg = config['solver']['scheduler']
         sc_cfg['params']['optimizer'] = self.opt
@@ -62,7 +62,7 @@ class Trainer(object):
         data = {
             'step': self.step,
             'model': self.model.state_dict(),
-            'ema': self.ema.state_dict(),
+            # 'ema': self.ema.state_dict(),
             'opt': self.opt.state_dict(),
         }
         torch.save(data, str(self.results_folder / f'checkpoint-{milestone}.pt'))
@@ -84,7 +84,7 @@ class Trainer(object):
         self.model.load_state_dict(data['model'])
         self.step = data['step']
         self.opt.load_state_dict(data['opt'])
-        self.ema.load_state_dict(data['ema'])
+        # self.ema.load_state_dict(data['ema'])
         self.milestone = milestone
 
     def load_classifier(self, milestone, verbose=False):
@@ -121,7 +121,7 @@ class Trainer(object):
                 self.opt.zero_grad()
                 self.step += 1
                 step += 1
-                self.ema.update()
+                # self.ema.update()
 
                 with torch.no_grad():
                     if self.step != 0 and self.step % self.save_cycle == 0:
@@ -154,7 +154,8 @@ class Trainer(object):
         num_cycle = int(np.ceil(num / size_every))
         
         for i in range(num_cycle):
-            sample = self.ema.ema_model.generate_mts(batch_size=size_every, model_kwargs=model_kwargs, cond_fn=cond_fn)
+            # sample = self.ema.ema_model.generate_mts(batch_size=size_every, model_kwargs=model_kwargs, cond_fn=cond_fn)
+            sample = self.model.generate_mts(batch_size=size_every, model_kwargs=model_kwargs, cond_fn=cond_fn)
             samplePUT = sample.cpu().numpy().copy()
             if auto_norm:
                 # samplePUT = unnormalize_to_zero_to_one(samplePUT)
@@ -188,12 +189,19 @@ class Trainer(object):
 
         for idx, (x, t_m) in enumerate(raw_dataloader):
             x, t_m = x.to(self.device), t_m.to(self.device)
+            # if sampling_steps == self.model.num_timesteps:
+            #     sample = self.ema.ema_model.sample_infill(shape=x.shape, target=x*t_m, partial_mask=t_m,
+            #                                               model_kwargs=model_kwargs)
+            # else:
+            #     sample = self.ema.ema_model.fast_sample_infill(shape=x.shape, target=x*t_m, partial_mask=t_m, model_kwargs=model_kwargs,
+            #                                                    sampling_timesteps=sampling_steps)
+
             if sampling_steps == self.model.num_timesteps:
-                sample = self.ema.ema_model.sample_infill(shape=x.shape, target=x*t_m, partial_mask=t_m,
-                                                          model_kwargs=model_kwargs)
+                sample = self.model.sample_infill(shape=x.shape, target=x*t_m, partial_mask=t_m,
+                                                  model_kwargs=model_kwargs)
             else:
-                sample = self.ema.ema_model.fast_sample_infill(shape=x.shape, target=x*t_m, partial_mask=t_m, model_kwargs=model_kwargs,
-                                                               sampling_timesteps=sampling_steps)
+                sample = self.model.fast_sample_infill(shape=x.shape, target=x*t_m, partial_mask=t_m, model_kwargs=model_kwargs,
+                                                       sampling_timesteps=sampling_steps)
 
             samples = np.row_stack([samples, sample.detach().cpu().numpy()])
             reals = np.row_stack([reals, x.detach().cpu().numpy()])
