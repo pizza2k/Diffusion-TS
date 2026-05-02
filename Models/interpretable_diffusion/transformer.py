@@ -305,10 +305,13 @@ class DecoderBlock(nn.Module):
         assert activate in ['GELU', 'GELU2']
         act = nn.GELU() if activate == 'GELU' else GELU2()
 
-        self.trend = TrendBlock(n_channel, n_channel, n_embd, n_feat, act=act)
+        # self.trend = TrendBlock(n_channel, n_channel, n_embd, n_feat, act=act)
+        # self.seasonal = FourierLayer(d_model=n_embd)
+        
         # self.decomp = MovingBlock(n_channel)
-        self.seasonal = FourierLayer(d_model=n_embd)
         # self.seasonal = SeasonBlock(n_channel, n_channel)
+        
+        self.proj = nn.Conv1d(n_channel, n_channel, 1)
 
         self.mlp = nn.Sequential(
             nn.Linear(n_embd, mlp_hidden_times * n_embd),
@@ -317,7 +320,7 @@ class DecoderBlock(nn.Module):
             nn.Dropout(resid_pdrop),
         )
 
-        self.proj = nn.Conv1d(n_channel, n_channel * 2, 1)
+        # self.proj = nn.Conv1d(n_channel, n_channel * 2, 1)
         self.linear = nn.Linear(n_embd, n_feat)
 
     def forward(self, x, encoder_output, timestep, mask=None, label_emb=None):
@@ -325,11 +328,13 @@ class DecoderBlock(nn.Module):
         x = x + a
         a, att = self.attn2(self.ln1_1(x, timestep), encoder_output, mask=mask)
         x = x + a
-        x1, x2 = self.proj(x).chunk(2, dim=1)
-        trend, season = self.trend(x1), self.seasonal(x2)
+        # x1, x2 = self.proj(x).chunk(2, dim=1)
+        # trend, season = self.trend(x1), self.seasonal(x2)
+        x_out = self.proj(x)
         x = x + self.mlp(self.ln2(x))
         m = torch.mean(x, dim=1, keepdim=True)
-        return x - m, self.linear(m), trend, season
+        # return x - m, self.linear(m), trend, season
+        return x - m, self.linear(m), x_out
     
 
 class Decoder(nn.Module):
@@ -365,17 +370,20 @@ class Decoder(nn.Module):
         b, c, _ = x.shape
         # att_weights = []
         mean = []
-        season = torch.zeros((b, c, self.d_model), device=x.device)
-        trend = torch.zeros((b, c, self.n_feat), device=x.device)
+        # season = torch.zeros((b, c, self.d_model), device=x.device)
+        # trend = torch.zeros((b, c, self.n_feat), device=x.device)
+        outputs = torch.zeros((b, c, self.d_model), device=x.device)
         for block_idx in range(len(self.blocks)):
-            x, residual_mean, residual_trend, residual_season = \
+            x, residual_mean, residual_output = \
                 self.blocks[block_idx](x, enc, t, mask=padding_masks, label_emb=label_emb)
-            season += residual_season
-            trend += residual_trend
+            # season += residual_season
+            # trend += residual_trend
+            outputs += residual_output
             mean.append(residual_mean)
 
         mean = torch.cat(mean, dim=1)
-        return x, mean, trend, season
+        # return x, mean, trend, season
+        return x, mean, outputs
 
 
 class Transformer(nn.Module):
@@ -407,8 +415,10 @@ class Transformer(nn.Module):
         else:
             kernel_size, padding = conv_params
 
-        self.combine_s = nn.Conv1d(n_embd, n_feat, kernel_size=kernel_size, stride=1, padding=padding,
-                                   padding_mode='circular', bias=False)
+        # self.combine_s = nn.Conv1d(n_embd, n_feat, kernel_size=kernel_size, stride=1, padding=padding,
+        #                            padding_mode='circular', bias=False)
+        self.combine_out = nn.Conv1d(n_embd, n_feat, kernel_size=kernel_size, stride=1, padding=padding,
+                                     padding_mode='circular', bias=False)
         self.combine_m = nn.Conv1d(n_layer_dec, 1, kernel_size=1, stride=1, padding=0,
                                    padding_mode='circular', bias=False)
 
@@ -425,17 +435,29 @@ class Transformer(nn.Module):
         enc_cond = self.encoder(inp_enc, t, padding_masks=padding_masks)
 
         inp_dec = self.pos_dec(emb)
-        output, mean, trend, season = self.decoder(inp_dec, t, enc_cond, padding_masks=padding_masks)
+        # output, mean, trend, season = self.decoder(inp_dec, t, enc_cond, padding_masks=padding_masks)
+
+        # res = self.inverse(output)
+        # res_m = torch.mean(res, dim=1, keepdim=True)
+        # season_error = self.combine_s(season.transpose(1, 2)).transpose(1, 2) + res - res_m
+        # trend = self.combine_m(mean) + res_m + trend
+
+        # if return_res:
+        #     return trend, self.combine_s(season.transpose(1, 2)).transpose(1, 2), res - res_m
+
+        # return trend, season_error
+        output, mean, decoder_output = self.decoder(inp_dec, t, enc_cond, padding_masks=padding_masks)
 
         res = self.inverse(output)
         res_m = torch.mean(res, dim=1, keepdim=True)
-        season_error = self.combine_s(season.transpose(1, 2)).transpose(1, 2) + res - res_m
-        trend = self.combine_m(mean) + res_m + trend
+        
+        output_pred = self.combine_out(decoder_output.transpose(1, 2)).transpose(1, 2)
+        final_output = self.combine_m(mean) + res_m + output_pred
 
         if return_res:
-            return trend, self.combine_s(season.transpose(1, 2)).transpose(1, 2), res - res_m
+            return final_output, res - res_m
 
-        return trend, season_error
+        return final_output
 
 
 if __name__ == '__main__':

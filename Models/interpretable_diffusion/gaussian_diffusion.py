@@ -145,8 +145,9 @@ class Diffusion_TS(nn.Module):
         return posterior_mean, posterior_variance, posterior_log_variance_clipped
     
     def output(self, x, t, padding_masks=None):
-        trend, season = self.model(x, t, padding_masks=padding_masks)
-        model_output = trend + season
+        # trend, season = self.model(x, t, padding_masks=padding_masks)
+        # model_output = trend + season
+        model_output = self.model(x, t, padding_masks=padding_masks)
         return model_output
 
     def model_predictions(self, x, t, clip_x_start=False, padding_masks=None):
@@ -279,8 +280,8 @@ class Diffusion_TS(nn.Module):
         t = torch.tensor([t])
         t = t.repeat(b).to(device)
         x = self.q_sample(x, t)
-        trend, season, residual = self.model(x, t, return_res=True)
-        return trend, season, residual, x
+        output, residual = self.model(x, t, return_res=True)
+        return output, residual, x
 
     def fast_sample_infill(self, shape, target, sampling_timesteps, partial_mask=None, clip_denoised=True, model_kwargs=None):
         batch, device, total_timesteps, eta = shape[0], self.betas.device, self.num_timesteps, self.eta
