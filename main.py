@@ -97,14 +97,14 @@ def main():
             # samples = unnormalize_to_zero_to_one(samples)
             #samples = dataset.scaler.inverse_transform(samples.reshape(-1, samples.shape[-1])).reshape(samples.shape)
             samples = dataset.unnormalize(samples)
-        np.save(os.path.join(args.save_dir, f'ddpm_fake_{args.name}.npy'), samples)
+        np.save(os.path.join(args.save_dir, f'fake_{args.name}.npy'), samples)
         
         num_samples, seq_len, feat_dim = samples.shape
         samples_2d = samples.reshape(-1, feat_dim)  
         
         
         df = pd.DataFrame(samples_2d, columns=column_names)
-        df.to_csv(os.path.join(args.save_dir, f'ddpm_fake_{args.name}.csv'), index=False)
+        df.to_csv(os.path.join(args.save_dir, f'fake_{args.name}.csv'), index=False)
 
 if __name__ == '__main__':
     main()

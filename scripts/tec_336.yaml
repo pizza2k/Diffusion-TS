@@ -3,14 +3,14 @@ model:
   params:
     seq_length: 848
     feature_size: 27
-    n_layer_enc: 6
-    n_layer_dec: 4
-    d_model: 192  # 8 X 24
+    n_layer_enc: 4
+    n_layer_dec: 3
+    d_model: 144  # 8 X 24
     timesteps: 1000
     sampling_timesteps: 1000
     loss_type: 'l1'
     beta_schedule: 'cosine'
-    n_heads: 8
+    n_heads: 6
     mlp_hidden_times: 4
     attn_pd: 0.0
     resid_pd: 0.0
@@ -19,9 +19,9 @@ model:
 
 solver:
   base_lr: 1.0e-5
-  max_epochs: 1500
+  max_epochs: 1000
   results_folder: ./Checkpoints/tec_336
-  gradient_accumulate_every: 4
+  gradient_accumulate_every: 6
   save_cycle: 150  # max_epochs // 10
   ema:
     decay: 0.995
@@ -31,7 +31,7 @@ solver:
     target: engine.lr_sch.ReduceLROnPlateauWithWarmup
     params:
       factor: 0.5
-      patience: 200
+      patience: 250
       min_lr: 1.0e-5
       threshold: 1.0e-1
       threshold_mode: rel
@@ -69,6 +69,6 @@ dataloader:
     step_size: 5.0e-2
     sampling_steps: 250
 
-  batch_size: 64
-  sample_size: 256
+  batch_size: 32
+  sample_size: 128
   shuffle: True

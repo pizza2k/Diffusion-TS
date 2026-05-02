@@ -160,13 +160,13 @@ class Trainer(object):
                 # samplePUT = unnormalize_to_zero_to_one(samplePUT)
                 # samplePUT = dataset.scaler.inverse_transform(samplePUT.reshape(-1, samples.shape[-1])).reshape(samplePUT.shape)
                 samplePUT = dataset.unnormalize(samplePUT)
-            np.save(os.path.join(dir, f'ddpm_fake_{name}_{i}.npy'), samplePUT)
+            np.save(os.path.join(dir, f'fake_{name}_{i}.npy'), samplePUT)
         
             seq_len, feat_dim = shape
             sample_2d = samplePUT.reshape(-1, feat_dim)  
             
             df = pd.DataFrame(sample_2d, columns=column_names)
-            df.to_csv(os.path.join(dir, f'ddpm_fake_{name}_{i}.csv'), index=False)
+            df.to_csv(os.path.join(dir, f'fake_{name}_{i}.csv'), index=False)
             
             samples = np.row_stack([samples, sample.detach().cpu().numpy()])
             torch.cuda.empty_cache()

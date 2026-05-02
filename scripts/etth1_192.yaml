@@ -2,30 +2,30 @@ model:
   target: Models.interpretable_diffusion.gaussian_diffusion.Diffusion_TS
   params:
     seq_length: 704
-    feature_size: 27
-    n_layer_enc: 6
-    n_layer_dec: 4
-    d_model: 192  # 8 X 24
-    timesteps: 1000
-    sampling_timesteps: 1000
+    feature_size: 7
+    n_layer_enc: 4
+    n_layer_dec: 3
+    d_model: 144  # 8 X 24
+    timesteps: 200
+    sampling_timesteps: 200
     loss_type: 'l1'
     beta_schedule: 'cosine'
-    n_heads: 8
+    n_heads: 6
     mlp_hidden_times: 4
     attn_pd: 0.0
     resid_pd: 0.0
-    kernel_size: 7
-    padding_size: 3
+    kernel_size: 3
+    padding_size: 1
 
 solver:
-  base_lr: 1.0e-5
-  max_epochs: 1500
-  results_folder: ./Checkpoints/tec_192
-  gradient_accumulate_every: 4
-  save_cycle: 150  # max_epochs // 10
+  base_lr: 1.0e-4
+  max_epochs: 1800
+  results_folder: ./Checkpoints/etth1_192
+  gradient_accumulate_every: 6
+  save_cycle: 180  # max_epochs // 10
   ema:
     decay: 0.995
-    update_interval: 10
+    update_interval: 4
   
   scheduler:
     target: engine.lr_sch.ReduceLROnPlateauWithWarmup
@@ -33,7 +33,7 @@ solver:
       factor: 0.5
       patience: 200
       min_lr: 1.0e-5
-      threshold: 1.0e-1
+      threshold: 1.0e-2
       threshold_mode: rel
       warmup_lr: 8.0e-4
       warmup: 100 
@@ -43,9 +43,9 @@ dataloader:
   train_dataset:
     target: Utils.Data_utils.tail_dataset.TailDataset
     params:
-      name: tail
+      name: etth1
       proportion: 1.0  # Set to rate < 1 if training conditional generation
-      data_root: ./Data/datasets/tail_samples_2014.csv
+      data_root: ./Data/datasets//tail_samples_ETTh1_0_192.csv
       window: 704  # seq_length
       save2npy: True
       neg_one_to_one: True
@@ -55,9 +55,9 @@ dataloader:
   test_dataset:
     target: Utils.Data_utils.tail_dataset.TailDataset
     params:
-      name: tail
+      name: etth1
       proportion: 0.9  # rate
-      data_root: ./Data/datasets/tail_samples_2014.csv
+      data_root: ./Data/datasets//tail_samples_ETTh1_0_192.csv
       window: 704  # seq_length
       save2npy: True
       neg_one_to_one: True

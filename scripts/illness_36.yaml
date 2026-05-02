@@ -1,52 +1,52 @@
 model:
   target: Models.interpretable_diffusion.gaussian_diffusion.Diffusion_TS
   params:
-    seq_length: 608
+    seq_length: 140
     feature_size: 7
-    n_layer_enc: 4
-    n_layer_dec: 3
-    d_model: 144  # 8 X 24
-    timesteps: 200
-    sampling_timesteps: 200
+    n_layer_enc: 3
+    n_layer_dec: 2
+    d_model: 64  # 4 X 16
+    timesteps: 500
+    sampling_timesteps: 500
     loss_type: 'l1'
     beta_schedule: 'cosine'
-    n_heads: 6
+    n_heads: 4
     mlp_hidden_times: 4
     attn_pd: 0.0
     resid_pd: 0.0
-    kernel_size: 3
-    padding_size: 1
+    kernel_size: 1
+    padding_size: 0
 
 solver:
-  base_lr: 1.0e-4
+  base_lr: 1.0e-5
   max_epochs: 1800
-  results_folder: ./Checkpoints/etth1_96
-  gradient_accumulate_every: 6
+  results_folder: ./Checkpoints/illness
+  gradient_accumulate_every: 2
   save_cycle: 180  # max_epochs // 10
   ema:
     decay: 0.995
-    update_interval: 4
+    update_interval: 10
   
   scheduler:
     target: engine.lr_sch.ReduceLROnPlateauWithWarmup
     params:
       factor: 0.5
-      patience: 200
+      patience: 400
       min_lr: 1.0e-5
-      threshold: 1.0e-2
+      threshold: 1.0e-1
       threshold_mode: rel
       warmup_lr: 8.0e-4
-      warmup: 100 
+      warmup: 50
       verbose: False
 
 dataloader:
   train_dataset:
     target: Utils.Data_utils.tail_dataset.TailDataset
     params:
-      name: etth1
+      name: illness
       proportion: 1.0  # Set to rate < 1 if training conditional generation
-      data_root: ./Data/datasets/tail_samples_ETTh1_0_96.csv
-      window: 608  # seq_length
+      data_root: ./Data/datasets/tail_samples_illness_0_36.csv
+      window: 140  # seq_length
       save2npy: True
       neg_one_to_one: True
       seed: 123
@@ -55,10 +55,10 @@ dataloader:
   test_dataset:
     target: Utils.Data_utils.tail_dataset.TailDataset
     params:
-      name: etth1
+      name: illness
       proportion: 0.9  # rate
-      data_root: ./Data/datasets//tail_samples_ETTh1_0_96.csv
-      window: 608  # seq_length
+      data_root: ./Data/datasets/tail_samples_illness_0_36.csv
+      window: 140  # seq_length
       save2npy: True
       neg_one_to_one: True
       seed: 123
@@ -69,6 +69,6 @@ dataloader:
     step_size: 5.0e-2
     sampling_steps: 200
 
-  batch_size: 64
+  batch_size: 30
   sample_size: 256
   shuffle: True

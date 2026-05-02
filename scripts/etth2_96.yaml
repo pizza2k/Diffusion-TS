@@ -20,7 +20,7 @@ model:
 solver:
   base_lr: 1.0e-4
   max_epochs: 1800
-  results_folder: ./Checkpoints/etth1_96
+  results_folder: ./Checkpoints/etth2_96
   gradient_accumulate_every: 6
   save_cycle: 180  # max_epochs // 10
   ema:
@@ -43,9 +43,9 @@ dataloader:
   train_dataset:
     target: Utils.Data_utils.tail_dataset.TailDataset
     params:
-      name: etth1
+      name: etth2
       proportion: 1.0  # Set to rate < 1 if training conditional generation
-      data_root: ./Data/datasets/tail_samples_ETTh1_0_96.csv
+      data_root: ./Data/datasets//tail_samples_ETTh2_0_96.csv
       window: 608  # seq_length
       save2npy: True
       neg_one_to_one: True
@@ -55,9 +55,9 @@ dataloader:
   test_dataset:
     target: Utils.Data_utils.tail_dataset.TailDataset
     params:
-      name: etth1
+      name: etth2
       proportion: 0.9  # rate
-      data_root: ./Data/datasets//tail_samples_ETTh1_0_96.csv
+      data_root: ./Data/datasets//tail_samples_ETTh2_0_96.csv
       window: 608  # seq_length
       save2npy: True
       neg_one_to_one: True
@@ -67,7 +67,7 @@ dataloader:
       distribution: geometric
     coefficient: 1.0e-2
     step_size: 5.0e-2
-    sampling_steps: 200
+    sampling_steps: 250
 
   batch_size: 64
   sample_size: 256
